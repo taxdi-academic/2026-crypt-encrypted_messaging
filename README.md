@@ -1,6 +1,6 @@
-# Messagerie Chiffrée avec Serveur de Confiance
+# Encrypted Messaging with Trusted Server
 
-Système de messagerie sécurisée implémentant un protocole de distribution de clés inspiré de Needham-Schroeder, développé dans le cadre du TP2 de Protocoles Cryptographiques à l'ENSIBS.
+Secure messaging system implementing a key distribution protocol inspired by Needham-Schroeder, developed as part of the Cryptographic Protocols TP2 course at ENSIBS.
 
 ## Architecture
 
@@ -11,64 +11,64 @@ Système de messagerie sécurisée implémentant un protocole de distribution de
 └──────┬──────┘                    └──────┬──────┘
        │                                  │
        │    ┌───────────────────┐        │
-       └───►│  Serveur (KDC)    │◄───────┘
-            │  Distribution des │
-            │  clés de session  │
+       └───►│  Server (KDC)     │◄───────┘
+            │  Session key      │
+            │  distribution     │
             └───────────────────┘
 ```
 
-## Protocole Cryptographique
+## Cryptographic Protocol
 
-### Algorithmes utilisés
+### Algorithms Used
 
-| Composant | Algorithme | Taille de clé |
-|-----------|------------|---------------|
-| Chiffrement asymétrique | RSA-OAEP | 2048 bits |
-| Chiffrement symétrique | AES-CBC | 256 bits |
+| Component | Algorithm | Key Size |
+|-----------|-----------|----------|
+| Asymmetric encryption | RSA-OAEP | 2048 bits |
+| Symmetric encryption | AES-CBC | 256 bits |
 | Signature | RSA-PSS | 2048 bits |
-| Hachage | SHA-256 | 256 bits |
+| Hashing | SHA-256 | 256 bits |
 | Padding (AES) | PKCS7 | - |
 
-### Flux d'établissement de session
+### Session Establishment Flow
 
-1. **Enregistrement** : Chaque client génère une paire RSA-2048 et enregistre sa clé publique auprès du serveur
-2. **Demande de session** : Le client A demande une session avec le client B
-3. **Génération de clé** : Le serveur génère une clé AES-256 aléatoire
-4. **Distribution** : Le serveur chiffre la clé AES avec la clé publique RSA de chaque client (OAEP)
-5. **Établissement** : Les clients déchiffrent la clé AES et peuvent communiquer de manière sécurisée
+1. **Registration**: Each client generates an RSA-2048 key pair and registers its public key with the server
+2. **Session Request**: Client A requests a session with Client B
+3. **Key Generation**: The server generates a random AES-256 key
+4. **Distribution**: The server encrypts the AES key with each client's RSA public key (OAEP)
+5. **Establishment**: Clients decrypt the AES key and can communicate securely
 
-### Sécurité des messages
+### Message Security
 
-- **Confidentialité** : Messages chiffrés en AES-256-CBC avec IV aléatoire
-- **Authenticité** : Chaque message est signé avec RSA-PSS (SHA-256)
-- **Intégrité** : La signature garantit que le message n'a pas été altéré
+- **Confidentiality**: Messages encrypted with AES-256-CBC with random IV
+- **Authenticity**: Each message is signed with RSA-PSS (SHA-256)
+- **Integrity**: The signature ensures the message has not been altered
 
 ## Installation
 
-### Prérequis
+### Prerequisites
 
 - Python 3.8+
 - pip
 
-### Dépendances
+### Dependencies
 
 ```bash
 pip install flask cryptography requests
 ```
 
-## Utilisation
+## Usage
 
-### 1. Démarrer le serveur de confiance
+### 1. Start the Trusted Server
 
 ```bash
 python server.py
 ```
 
-Le serveur écoute sur le port 5000.
+The server listens on port 5000.
 
-### 2. Démarrer les clients
+### 2. Start the Clients
 
-Dans des terminaux séparés :
+In separate terminals:
 
 ```bash
 # Terminal 1 - Alice
@@ -78,94 +78,94 @@ python client.py alice 5001
 python client.py bob 5002
 ```
 
-### 3. Établir une communication
+### 3. Establish Communication
 
-Depuis le terminal d'Alice :
+From Alice's terminal:
 
 ```
-/list                  # Affiche les clients disponibles
-/connect bob           # Établit une session sécurisée avec Bob
-Bonjour Bob !          # Envoie un message chiffré
+/list                  # Display available clients
+/connect bob           # Establish a secure session with Bob
+Hello Bob!             # Send an encrypted message
 ```
 
-### Commandes disponibles
+### Available Commands
 
-| Commande | Description |
-|----------|-------------|
-| `/list` | Liste les clients enregistrés |
-| `/connect <id>` | Établit une session avec un client |
-| `/sessions` | Affiche les sessions actives |
-| `/switch <id>` | Change la session courante |
-| `/history [id]` | Affiche l'historique des messages |
-| `/quit` | Ferme le client |
+| Command | Description |
+|---------|-------------|
+| `/list` | List registered clients |
+| `/connect <id>` | Establish a session with a client |
+| `/sessions` | Display active sessions |
+| `/switch <id>` | Switch current session |
+| `/history [id]` | Display message history |
+| `/quit` | Close the client |
 
-### Interface Web
+### Web Interface
 
-Chaque client expose une interface web accessible à l'adresse :
+Each client exposes a web interface accessible at:
 
 ```
 http://127.0.0.1:<port>
 ```
 
-## Structure du Projet
+## Project Structure
 
 ```
 TP2/
-├── server.py           # Serveur de distribution de clés (KDC)
-├── client.py           # Point d'entrée du client
-├── secure_client.py    # Logique principale du client
-├── crypto_utils.py     # Fonctions cryptographiques
-├── history.py          # Gestion de l'historique
-├── index.html          # Interface web (accueil)
-├── chat.html           # Interface web (chat)
-├── keys/               # Stockage des clés (généré)
-└── history_<id>/       # Historique des conversations (généré)
+├── server.py           # Key Distribution Center (KDC)
+├── client.py           # Client entry point
+├── secure_client.py    # Main client logic
+├── crypto_utils.py     # Cryptographic functions
+├── history.py          # History management
+├── index.html          # Web interface (home)
+├── chat.html           # Web interface (chat)
+├── keys/               # Key storage (generated)
+└── history_<id>/       # Conversation history (generated)
 ```
 
-## API du Serveur
+## Server API
 
-| Endpoint | Méthode | Description |
-|----------|---------|-------------|
-| `/register` | POST | Enregistre un client avec sa clé publique |
-| `/clients` | GET | Liste les clients enregistrés |
-| `/get_public_key/<id>` | GET | Récupère la clé publique d'un client |
-| `/request_session` | POST | Demande une session entre deux clients |
-| `/pending_invitations/<id>` | GET | Récupère les invitations en attente |
-| `/get_session_key` | POST | Récupère la clé de session chiffrée |
-| `/active_sessions/<id>` | GET | Liste les sessions actives d'un client |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/register` | POST | Register a client with its public key |
+| `/clients` | GET | List registered clients |
+| `/get_public_key/<id>` | GET | Retrieve a client's public key |
+| `/request_session` | POST | Request a session between two clients |
+| `/pending_invitations/<id>` | GET | Retrieve pending invitations |
+| `/get_session_key` | POST | Retrieve encrypted session key |
+| `/active_sessions/<id>` | GET | List a client's active sessions |
 
-## Exemple de communication
+## Communication Example
 
 ```
-[ENVOI] Message vers bob
-[CLAIR] Bonjour Bob !
-[CHIFFRE] a3Kj8mN2pQ5rS7vX9zA1bC3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5zA7bC9dE...
+[SEND] Message to bob
+[PLAIN] Hello Bob!
+[ENCRYPTED] a3Kj8mN2pQ5rS7vX9zA1bC3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5zA7bC9dE...
 [IV] f1G2h3I4j5K6l7M8n9O0
 [SIGNATURE] p1Q2r3S4t5U6v7W8x9Y0a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8s9T0...
 
-[RECEPTION] Message de alice
-[CHIFFRE] a3Kj8mN2pQ5rS7vX9zA1bC3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5zA7bC9dE...
+[RECEIVE] Message from alice
+[ENCRYPTED] a3Kj8mN2pQ5rS7vX9zA1bC3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5zA7bC9dE...
 [IV] f1G2h3I4j5K6l7M8n9O0
-[CLAIR] Bonjour Bob !
+[PLAIN] Hello Bob!
 [SIGNATURE] [OK]
 ```
 
-## Sécurité
+## Security
 
-### Points forts
+### Strengths
 
-- Clés de session uniques pour chaque paire de clients
-- IV aléatoire pour chaque message (pas de réutilisation)
-- Signature de tous les messages pour l'authentification
-- Clés RSA générées à chaque démarrage du client
+- Unique session keys for each client pair
+- Random IV for each message (no reuse)
+- Signature of all messages for authentication
+- RSA keys generated at each client startup
 
-### Limitations (contexte pédagogique)
+### Limitations (Educational Context)
 
-- Le serveur de confiance est un point de confiance unique (single point of trust)
-- Pas de perfect forward secrecy (PFS)
-- Les clés privées sont en mémoire uniquement
-- Pas de gestion de révocation des clés
+- The trusted server is a single point of trust
+- No perfect forward secrecy (PFS)
+- Private keys are stored in memory only
+- No key revocation management
 
-## Auteur
+## Author
 
-Eliot MAHÉ - ENSIBS - Protocoles Cryptographiques TP2
+Eliot MAHÉ - ENSIBS - Cryptographic Protocols TP2
