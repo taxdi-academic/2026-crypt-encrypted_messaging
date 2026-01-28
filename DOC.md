@@ -1,60 +1,60 @@
-# Documentation Technique - Communication Sécurisée
+# Technical Documentation - Secure Communication
 
-Cette documentation explique en détail le fonctionnement de chaque fonction des programmes. Elle est destinée aux personnes souhaitant comprendre le code, même sans grande expérience en programmation.
-
----
-
-## Table des matières
-
-1. [Structure du projet](#structure-du-projet)
-2. [server.py - Serveur de confiance](#serverpy---serveur-de-confiance)
-3. [crypto_utils.py - Fonctions cryptographiques](#crypto_utilspy---fonctions-cryptographiques)
-4. [history.py - Gestion de l'historique](#historypy---gestion-de-lhistorique)
-5. [secure_client.py - Classe principale du client](#secure_clientpy---classe-principale-du-client)
-6. [client.py - Point d'entrée](#clientpy---point-dentrée)
-7. [Pages HTML](#pages-html)
+This documentation explains in detail how each function in the programs works. It is intended for people wishing to understand the code, even without extensive programming experience.
 
 ---
 
-## Structure du projet
+## Table of Contents
+
+1. [Project Structure](#project-structure)
+2. [server.py - Trusted Server](#serverpy---trusted-server)
+3. [crypto_utils.py - Cryptographic Functions](#crypto_utilspy---cryptographic-functions)
+4. [history.py - History Management](#historypy---history-management)
+5. [secure_client.py - Main Client Class](#secure_clientpy---main-client-class)
+6. [client.py - Entry Point](#clientpy---entry-point)
+7. [HTML Pages](#html-pages)
+
+---
+
+## Project Structure
 
 ```
 TP2/
-├── server.py          # Serveur de confiance (distribution de clés)
-├── client.py          # Point d'entrée du client (27 lignes)
-├── secure_client.py   # Logique principale du client (405 lignes)
-├── crypto_utils.py    # Fonctions cryptographiques (93 lignes)
-├── history.py         # Gestion de l'historique (80 lignes)
-├── index.html         # Page de sélection des clients
-├── chat.html          # Page de discussion
-├── keys/              # Dossier des clés (créé automatiquement)
+├── server.py          # Trusted server (key distribution)
+├── client.py          # Client entry point (27 lines)
+├── secure_client.py   # Main client logic (405 lines)
+├── crypto_utils.py    # Cryptographic functions (93 lines)
+├── history.py         # History management (80 lines)
+├── index.html         # Client selection page
+├── chat.html          # Chat page
+├── keys/              # Key folder (automatically created)
 │   ├── alice_public.pem
 │   ├── bob_public.pem
 │   └── session_xxx_aes.key
-└── history_<client>/  # Historique par client (créé automatiquement)
+└── history_<client>/  # History per client (automatically created)
     └── <peer>.json
 ```
 
 ---
 
-# server.py - Serveur de confiance
+# server.py - Trusted Server
 
-Le serveur est le "tiers de confiance" qui permet aux clients de s'enregistrer et de recevoir des clés de session pour communiquer entre eux.
+The server is the "trusted third party" that allows clients to register and receive session keys to communicate with each other.
 
-## Variables globales
+## Global Variables
 
 ```python
 registered_clients = {}
 ```
-**Qu'est-ce que c'est ?** Un dictionnaire (comme un annuaire) qui stocke tous les clients enregistrés.
+**What is it?** A dictionary (like a directory) that stores all registered clients.
 
-**Structure :**
+**Structure:**
 ```python
 {
     "alice": {
-        "public_key": b"-----BEGIN PUBLIC KEY-----...",  # Clé publique RSA
-        "address": ("127.0.0.1", 5001),                   # Adresse IP et port
-        "registered_at": "2026-01-20T14:30:00"            # Date d'enregistrement
+        "public_key": b"-----BEGIN PUBLIC KEY-----...",  # RSA public key
+        "address": ("127.0.0.1", 5001),                   # IP address and port
+        "registered_at": "2026-01-20T14:30:00"            # Registration date
     },
     "bob": { ... }
 }
@@ -65,15 +65,15 @@ registered_clients = {}
 ```python
 active_sessions = {}
 ```
-**Qu'est-ce que c'est ?** Un dictionnaire qui stocke toutes les sessions de communication actives.
+**What is it?** A dictionary that stores all active communication sessions.
 
-**Structure :**
+**Structure:**
 ```python
 {
-    "abc123...": {                           # Identifiant unique de la session
-        "clients": ["alice", "bob"],         # Les deux participants
-        "aes_key": b"\x12\x34...",           # La clé AES partagée (32 bytes)
-        "created_at": "2026-01-20T14:35:00"  # Date de création
+    "abc123...": {                           # Unique session identifier
+        "clients": ["alice", "bob"],         # The two participants
+        "aes_key": b"\x12\x34...",           # Shared AES key (32 bytes)
+        "created_at": "2026-01-20T14:35:00"  # Creation date
     }
 }
 ```
@@ -83,13 +83,13 @@ active_sessions = {}
 ```python
 pending_invitations = {}
 ```
-**Qu'est-ce que c'est ?** Un dictionnaire qui stocke les invitations de session en attente.
+**What is it?** A dictionary that stores pending session invitations.
 
-**Pourquoi ?** Quand Alice demande une session avec Bob, le serveur garde l'invitation jusqu'à ce que Bob la récupère.
+**Why?** When Alice requests a session with Bob, the server keeps the invitation until Bob retrieves it.
 
 ---
 
-## Fonctions utilitaires
+## Utility Functions
 
 ### `generate_aes_key()`
 
@@ -98,13 +98,13 @@ def generate_aes_key():
     return secrets.token_bytes(32)
 ```
 
-**Ce que fait cette fonction :** Génère une clé AES aléatoire de 256 bits (32 octets).
+**What this function does:** Generates a random 256-bit (32-byte) AES key.
 
-**Comment ça marche :**
-1. `secrets.token_bytes(32)` génère 32 octets aléatoires de manière sécurisée
-2. Ces 32 octets forment une clé AES-256
+**How it works:**
+1. `secrets.token_bytes(32)` generates 32 random bytes securely
+2. These 32 bytes form an AES-256 key
 
-**Exemple de résultat :** `b'\x8f\x2a\x1b...'` (32 octets aléatoires)
+**Example result:** `b'\x8f\x2a\x1b...'` (32 random bytes)
 
 ---
 
@@ -124,18 +124,18 @@ def encrypt_with_rsa(public_key_pem: bytes, data: bytes) -> bytes:
     return encrypted
 ```
 
-**Ce que fait cette fonction :** Chiffre des données avec une clé publique RSA.
+**What this function does:** Encrypts data with an RSA public key.
 
-**Paramètres :**
-- `public_key_pem` : La clé publique au format PEM (texte commençant par "-----BEGIN PUBLIC KEY-----")
-- `data` : Les données à chiffrer (ici, la clé AES)
+**Parameters:**
+- `public_key_pem`: The public key in PEM format (text starting with "-----BEGIN PUBLIC KEY-----")
+- `data`: The data to encrypt (here, the AES key)
 
-**Comment ça marche :**
-1. `serialization.load_pem_public_key()` : Convertit le texte PEM en objet clé utilisable
-2. `public_key.encrypt()` : Chiffre les données
-3. `padding.OAEP` : Ajoute un "rembourrage" sécurisé pour éviter certaines attaques
+**How it works:**
+1. `serialization.load_pem_public_key()`: Converts PEM text to a usable key object
+2. `public_key.encrypt()`: Encrypts the data
+3. `padding.OAEP`: Adds secure "padding" to prevent certain attacks
 
-**Pourquoi OAEP ?** C'est le mode de padding recommandé pour RSA. Il ajoute de l'aléatoire au chiffrement, ce qui le rend plus sûr.
+**Why OAEP?** It's the recommended padding mode for RSA. It adds randomness to the encryption, making it more secure.
 
 ---
 
@@ -146,24 +146,24 @@ def get_timestamp():
     return datetime.now().isoformat()
 ```
 
-**Ce que fait cette fonction :** Retourne la date et l'heure actuelles au format ISO.
+**What this function does:** Returns the current date and time in ISO format.
 
-**Exemple de résultat :** `"2026-01-20T14:30:45.123456"`
+**Example result:** `"2026-01-20T14:30:45.123456"`
 
 ---
 
-## Routes HTTP (endpoints)
+## HTTP Routes (Endpoints)
 
-### `POST /register` - Enregistrer un client
+### `POST /register` - Register a Client
 
 ```python
 @app.route("/register", methods=["POST"])
 def register_client():
 ```
 
-**Ce que fait cette route :** Permet à un client de s'enregistrer auprès du serveur avec sa clé publique.
+**What this route does:** Allows a client to register with the server using its public key.
 
-**Données attendues (JSON) :**
+**Expected data (JSON):**
 ```json
 {
     "client_id": "alice",
@@ -172,15 +172,15 @@ def register_client():
 }
 ```
 
-**Étapes détaillées :**
-1. Récupère les données JSON envoyées par le client
-2. Vérifie que tous les champs sont présents
-3. Décode la clé publique (de Base64 vers bytes)
-4. Stocke les informations dans `registered_clients`
-5. Initialise une liste vide pour les invitations de ce client
-6. Retourne une confirmation
+**Detailed steps:**
+1. Retrieves JSON data sent by the client
+2. Verifies that all fields are present
+3. Decodes the public key (from Base64 to bytes)
+4. Stores the information in `registered_clients`
+5. Initializes an empty list for this client's invitations
+6. Returns a confirmation
 
-**Réponse :**
+**Response:**
 ```json
 {
     "status": "registered",
@@ -191,16 +191,16 @@ def register_client():
 
 ---
 
-### `GET /clients` - Lister les clients
+### `GET /clients` - List Clients
 
 ```python
 @app.route("/clients", methods=["GET"])
 def list_clients():
 ```
 
-**Ce que fait cette route :** Retourne la liste de tous les clients enregistrés.
+**What this route does:** Returns the list of all registered clients.
 
-**Réponse :**
+**Response:**
 ```json
 {
     "clients": [
@@ -212,20 +212,20 @@ def list_clients():
 
 ---
 
-### `GET /get_public_key/<client_id>` - Récupérer une clé publique
+### `GET /get_public_key/<client_id>` - Retrieve a Public Key
 
 ```python
 @app.route("/get_public_key/<client_id>", methods=["GET"])
 def get_public_key(client_id):
 ```
 
-**Ce que fait cette route :** Retourne la clé publique d'un client spécifique.
+**What this route does:** Returns a specific client's public key.
 
-**Pourquoi c'est utile ?** Pour vérifier les signatures des messages. Si Alice envoie un message signé à Bob, Bob a besoin de la clé publique d'Alice pour vérifier que c'est bien elle qui l'a envoyé.
+**Why is it useful?** To verify message signatures. If Alice sends a signed message to Bob, Bob needs Alice's public key to verify that it really came from her.
 
-**Exemple d'appel :** `GET /get_public_key/alice`
+**Example call:** `GET /get_public_key/alice`
 
-**Réponse :**
+**Response:**
 ```json
 {
     "client_id": "alice",
@@ -235,16 +235,16 @@ def get_public_key(client_id):
 
 ---
 
-### `POST /request_session` - Demander une session
+### `POST /request_session` - Request a Session
 
 ```python
 @app.route("/request_session", methods=["POST"])
 def request_session():
 ```
 
-**Ce que fait cette route :** Crée une nouvelle session sécurisée entre deux clients.
+**What this route does:** Creates a new secure session between two clients.
 
-**Données attendues :**
+**Expected data:**
 ```json
 {
     "from_client": "alice",
@@ -252,19 +252,19 @@ def request_session():
 }
 ```
 
-**Étapes détaillées :**
-1. Vérifie que les deux clients existent
-2. Génère une clé AES aléatoire (la clé de session) - **une seule fois**
-3. Crée un identifiant unique pour cette session
-4. Chiffre la clé AES avec la clé publique d'Alice
-5. Chiffre la clé AES avec la clé publique de Bob
-6. Stocke la session dans `active_sessions`
-7. Ajoute une invitation pour Bob dans `pending_invitations`
-8. Retourne les informations à Alice
+**Detailed steps:**
+1. Verifies that both clients exist
+2. Generates a random AES key (the session key) - **only once**
+3. Creates a unique identifier for this session
+4. Encrypts the AES key with Alice's public key
+5. Encrypts the AES key with Bob's public key
+6. Stores the session in `active_sessions`
+7. Adds an invitation for Bob to `pending_invitations`
+8. Returns the information to Alice
 
-**Pourquoi chiffrer deux fois la clé AES ?** Chaque client ne peut déchiffrer qu'avec sa propre clé privée. Donc Alice reçoit la clé chiffrée pour elle, et Bob reçoit la clé chiffrée pour lui.
+**Why encrypt the AES key twice?** Each client can only decrypt with their own private key. So Alice receives the key encrypted for her, and Bob receives the key encrypted for him.
 
-**Réponse :**
+**Response:**
 ```json
 {
     "session_id": "abc123...",
@@ -278,55 +278,55 @@ def request_session():
 
 ---
 
-### `GET /pending_invitations/<client_id>` - Récupérer les invitations
+### `GET /pending_invitations/<client_id>` - Retrieve Invitations
 
 ```python
 @app.route("/pending_invitations/<client_id>", methods=["GET"])
 def get_pending_invitations(client_id):
 ```
 
-**Ce que fait cette route :** Retourne les invitations de session en attente pour un client.
+**What this route does:** Returns pending session invitations for a client.
 
 ---
 
-### `POST /clear_invitation` - Supprimer une invitation
+### `POST /clear_invitation` - Delete an Invitation
 
 ```python
 @app.route("/clear_invitation", methods=["POST"])
 def clear_invitation():
 ```
 
-**Ce que fait cette route :** Supprime une invitation après qu'elle a été traitée.
+**What this route does:** Deletes an invitation after it has been processed.
 
 ---
 
-### `POST /get_session_key` - Récupérer sa clé de session
+### `POST /get_session_key` - Retrieve Session Key
 
 ```python
 @app.route("/get_session_key", methods=["POST"])
 def get_session_key():
 ```
 
-**Ce que fait cette route :** Permet à un client de récupérer la clé AES d'une session existante.
+**What this route does:** Allows a client to retrieve the AES key of an existing session.
 
-**Sécurité :** Le serveur vérifie que le client fait bien partie de la session avant de lui donner la clé.
+**Security:** The server verifies that the client is part of the session before giving them the key.
 
 ---
 
-### `GET /active_sessions/<client_id>` - Lister ses sessions
+### `GET /active_sessions/<client_id>` - List Sessions
 
 ```python
 @app.route("/active_sessions/<client_id>", methods=["GET"])
 def get_active_sessions(client_id):
 ```
 
-**Ce que fait cette route :** Liste toutes les sessions actives d'un client.
+**What this route does:** Lists all active sessions for a client.
 
 ---
 
-# crypto_utils.py - Fonctions cryptographiques
+# crypto_utils.py - Cryptographic Functions
 
-Ce fichier contient toutes les fonctions de cryptographie utilisées par le client.
+This file contains all cryptographic functions used by the client.
 
 ## `generate_rsa_keypair()`
 
@@ -340,13 +340,13 @@ def generate_rsa_keypair():
     return private_key, private_key.public_key()
 ```
 
-**Ce que fait cette fonction :** Génère une paire de clés RSA-2048.
+**What this function does:** Generates an RSA-2048 key pair.
 
-**Paramètres de génération :**
-- `public_exponent=65537` : Valeur standard pour l'exposant public
-- `key_size=2048` : Taille de la clé en bits (sécurité recommandée)
+**Generation parameters:**
+- `public_exponent=65537`: Standard value for the public exponent
+- `key_size=2048`: Key size in bits (recommended security)
 
-**Retourne :** Un tuple (clé_privée, clé_publique)
+**Returns:** A tuple (private_key, public_key)
 
 ---
 
@@ -360,9 +360,9 @@ def public_key_to_pem(public_key) -> bytes:
     )
 ```
 
-**Ce que fait cette fonction :** Convertit une clé publique en format PEM (texte lisible).
+**What this function does:** Converts a public key to PEM format (readable text).
 
-**Résultat :**
+**Result:**
 ```
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A...
@@ -378,7 +378,7 @@ def load_public_key_from_pem(pem_data: bytes):
     return serialization.load_pem_public_key(pem_data, backend=default_backend())
 ```
 
-**Ce que fait cette fonction :** Charge une clé publique depuis le format PEM.
+**What this function does:** Loads a public key from PEM format.
 
 ---
 
@@ -396,9 +396,9 @@ def decrypt_rsa(private_key, encrypted_data: bytes) -> bytes:
     )
 ```
 
-**Ce que fait cette fonction :** Déchiffre des données avec une clé privée RSA (padding OAEP).
+**What this function does:** Decrypts data with an RSA private key (OAEP padding).
 
-**Utilisation principale :** Déchiffrer la clé AES reçue du serveur.
+**Main use:** Decrypt the AES key received from the server.
 
 ---
 
@@ -416,14 +416,14 @@ def sign_message(private_key, message: str) -> bytes:
     )
 ```
 
-**Ce que fait cette fonction :** Signe un message avec une clé privée RSA (padding PSS).
+**What this function does:** Signs a message with an RSA private key (PSS padding).
 
-**Pourquoi signer ?** La signature prouve que le message vient bien de l'expéditeur. Seul le détenteur de la clé privée peut créer cette signature.
+**Why sign?** The signature proves that the message really comes from the sender. Only the holder of the private key can create this signature.
 
-**Comment ça marche :**
-1. Convertit le message en bytes
-2. Calcule un "hash" (empreinte) du message avec SHA-256
-3. Chiffre ce hash avec la clé privée → c'est la signature
+**How it works:**
+1. Converts the message to bytes
+2. Calculates a "hash" (fingerprint) of the message with SHA-256
+3. Encrypts this hash with the private key → this is the signature
 
 ---
 
@@ -446,11 +446,11 @@ def verify_signature(public_key, message: str, signature: bytes) -> bool:
         return False
 ```
 
-**Ce que fait cette fonction :** Vérifie la signature d'un message.
+**What this function does:** Verifies a message signature.
 
-**Retourne :**
-- `True` : Signature valide (message authentique)
-- `False` : Signature invalide (message potentiellement falsifié)
+**Returns:**
+- `True`: Valid signature (authentic message)
+- `False`: Invalid signature (potentially forged message)
 
 ---
 
@@ -460,7 +460,7 @@ def verify_signature(public_key, message: str, signature: bytes) -> bool:
 def encrypt_aes(plaintext: bytes, aes_key: bytes) -> tuple:
     iv = secrets.token_bytes(16)
 
-    # Padding PKCS7
+    # PKCS7 Padding
     block_size = 16
     padding_len = block_size - (len(plaintext) % block_size)
     padded = plaintext + bytes([padding_len] * padding_len)
@@ -472,31 +472,31 @@ def encrypt_aes(plaintext: bytes, aes_key: bytes) -> tuple:
     return ciphertext, iv
 ```
 
-**Ce que fait cette fonction :** Chiffre un message avec AES-256-CBC.
+**What this function does:** Encrypts a message with AES-256-CBC.
 
-**Étapes détaillées :**
+**Detailed steps:**
 
-1. **Génération de l'IV (Initialization Vector) :**
+1. **IV (Initialization Vector) generation:**
    ```python
    iv = secrets.token_bytes(16)
    ```
-   L'IV est un bloc de 16 bytes aléatoires. Il rend chaque chiffrement unique, même pour le même message.
+   The IV is a 16-byte random block. It makes each encryption unique, even for the same message.
 
-2. **Padding PKCS7 :**
+2. **PKCS7 Padding:**
    ```python
    padding_len = block_size - (len(plaintext) % block_size)
    padded = plaintext + bytes([padding_len] * padding_len)
    ```
-   AES travaille par blocs de 16 bytes. Si le message ne fait pas un multiple de 16, on ajoute des bytes pour compléter.
+   AES works with 16-byte blocks. If the message is not a multiple of 16, we add bytes to complete it.
 
-   **Exemple :** Message de 13 bytes → on ajoute 3 bytes de valeur `0x03`
+   **Example:** 13-byte message → add 3 bytes of value `0x03`
 
-3. **Chiffrement :**
-   - `AES` : L'algorithme de chiffrement
-   - `CBC` : Le mode de chaînage (chaque bloc dépend du précédent)
-   - `iv` : Le vecteur d'initialisation
+3. **Encryption:**
+   - `AES`: The encryption algorithm
+   - `CBC`: The chaining mode (each block depends on the previous one)
+   - `iv`: The initialization vector
 
-**Retourne :** Le message chiffré et l'IV (nécessaire pour déchiffrer)
+**Returns:** The encrypted message and the IV (needed to decrypt)
 
 ---
 
@@ -513,20 +513,20 @@ def decrypt_aes(ciphertext: bytes, iv: bytes, aes_key: bytes) -> bytes:
     return padded[:-padding_len]
 ```
 
-**Ce que fait cette fonction :** Déchiffre un message chiffré avec AES-256-CBC.
+**What this function does:** Decrypts a message encrypted with AES-256-CBC.
 
-**Étapes :**
-1. Crée un déchiffreur avec la même clé et le même IV
-2. Déchiffre les données
-3. Retire le padding (le dernier byte indique combien de bytes retirer)
+**Steps:**
+1. Creates a decryptor with the same key and IV
+2. Decrypts the data
+3. Removes the padding (the last byte indicates how many bytes to remove)
 
 ---
 
-# history.py - Gestion de l'historique
+# history.py - History Management
 
-Ce fichier gère la persistance des conversations.
+This file manages conversation persistence.
 
-## Classe `HistoryManager`
+## `HistoryManager` Class
 
 ### `__init__(self, client_id)`
 
@@ -538,10 +538,10 @@ def __init__(self, client_id: str):
     self.messages = {}
 ```
 
-**Ce que fait cette méthode :** Initialise le gestionnaire d'historique.
+**What this method does:** Initializes the history manager.
 
-- Crée un dossier `history_<client_id>/` s'il n'existe pas
-- Initialise un dictionnaire vide pour les messages
+- Creates a `history_<client_id>/` folder if it doesn't exist
+- Initializes an empty dictionary for messages
 
 ---
 
@@ -552,9 +552,9 @@ def get_timestamp(self) -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 ```
 
-**Ce que fait cette fonction :** Retourne la date/heure au format lisible.
+**What this function does:** Returns the date/time in a readable format.
 
-**Exemple :** `"2026-01-20 14:30:45"`
+**Example:** `"2026-01-20 14:30:45"`
 
 ---
 
@@ -568,12 +568,12 @@ def load(self):
             self.messages[peer_id] = json.load(f)
 ```
 
-**Ce que fait cette fonction :** Charge l'historique des conversations depuis les fichiers JSON.
+**What this function does:** Loads conversation history from JSON files.
 
-**Comment ça marche :**
-1. Parcourt tous les fichiers `.json` dans le dossier d'historique
-2. Pour chaque fichier, extrait le nom du pair (ex: `bob.json` → `bob`)
-3. Charge le contenu JSON dans le dictionnaire `messages`
+**How it works:**
+1. Iterates through all `.json` files in the history folder
+2. For each file, extracts the peer name (e.g., `bob.json` → `bob`)
+3. Loads the JSON content into the `messages` dictionary
 
 ---
 
@@ -586,7 +586,7 @@ def save(self, peer_id: str):
         json.dump(self.messages[peer_id], f, ensure_ascii=False, indent=2)
 ```
 
-**Ce que fait cette fonction :** Sauvegarde l'historique d'une conversation dans un fichier JSON.
+**What this function does:** Saves a conversation's history to a JSON file.
 
 ---
 
@@ -596,13 +596,13 @@ def save(self, peer_id: str):
 def add_message(self, peer_id: str, from_id: str, message: str, verified: bool = True) -> dict:
 ```
 
-**Ce que fait cette fonction :** Ajoute un message à l'historique et le sauvegarde immédiatement.
+**What this function does:** Adds a message to the history and saves it immediately.
 
-**Structure d'un message :**
+**Message structure:**
 ```json
 {
     "from": "alice",
-    "message": "Bonjour!",
+    "message": "Hello!",
     "timestamp": "2026-01-20 14:30:00",
     "verified": true
 }
@@ -616,7 +616,7 @@ def add_message(self, peer_id: str, from_id: str, message: str, verified: bool =
 def get_messages(self, peer_id: str, limit: int = 50) -> list:
 ```
 
-**Ce que fait cette fonction :** Retourne les derniers messages d'une conversation (50 par défaut).
+**What this function does:** Returns the last messages of a conversation (50 by default).
 
 ---
 
@@ -626,22 +626,22 @@ def get_messages(self, peer_id: str, limit: int = 50) -> list:
 def show(self, peer_id: str, client_id: str):
 ```
 
-**Ce que fait cette fonction :** Affiche l'historique dans le terminal avec formatage.
+**What this function does:** Displays the history in the terminal with formatting.
 
-**Affichage :**
+**Display:**
 ```
-[SYSTEM] Historique avec 'bob':
+[SYSTEM] History with 'bob':
 --------------------------------------------------
-[2026-01-20 14:30:00] [OK] Moi: Salut!
+[2026-01-20 14:30:00] [OK] Me: Hi!
 [2026-01-20 14:30:05] [OK] bob: Hello!
 --------------------------------------------------
 ```
 
 ---
 
-# secure_client.py - Classe principale du client
+# secure_client.py - Main Client Class
 
-## Classe `SecureClient`
+## `SecureClient` Class
 
 ### `__init__(self, client_id, port, server_url)`
 
@@ -649,14 +649,14 @@ def show(self, peer_id: str, client_id: str):
 def __init__(self, client_id: str, port: int, server_url: str = "http://127.0.0.1:5000"):
 ```
 
-**Ce que fait cette méthode :** Initialise un nouveau client sécurisé.
+**What this method does:** Initializes a new secure client.
 
-**Étapes :**
-1. Crée le dossier `keys/` pour stocker les clés
-2. Génère une paire de clés RSA
-3. Initialise les dictionnaires pour les sessions
-4. Crée le gestionnaire d'historique
-5. Configure les routes Flask
+**Steps:**
+1. Creates the `keys/` folder to store keys
+2. Generates an RSA key pair
+3. Initializes dictionaries for sessions
+4. Creates the history manager
+5. Configures Flask routes
 
 ---
 
@@ -666,9 +666,9 @@ def __init__(self, client_id: str, port: int, server_url: str = "http://127.0.0.
 def _save_key_to_file(self, filename: str, key_data: bytes, key_type: str = "AES"):
 ```
 
-**Ce que fait cette fonction :** Sauvegarde une clé dans le dossier `keys/`.
+**What this function does:** Saves a key to the `keys/` folder.
 
-**Format du fichier :**
+**File format:**
 ```
 Type: AES-256
 Hex: 8f2a1b3c4d5e6f...
@@ -677,9 +677,9 @@ Base64: jyobPE1ebw...
 
 ---
 
-## Routes Flask du client
+## Client Flask Routes
 
-### `GET /` - Page d'accueil
+### `GET /` - Home Page
 
 ```python
 @self.app.route("/")
@@ -687,11 +687,11 @@ def index():
     return send_file("index.html")
 ```
 
-**Ce que fait cette route :** Sert la page de sélection des clients.
+**What this route does:** Serves the client selection page.
 
 ---
 
-### `GET /chat` - Page de discussion
+### `GET /chat` - Chat Page
 
 ```python
 @self.app.route("/chat")
@@ -699,20 +699,20 @@ def chat_page():
     return send_file("chat.html")
 ```
 
-**Ce que fait cette route :** Sert la page de discussion.
+**What this route does:** Serves the chat page.
 
 ---
 
-### `POST /receive` - Recevoir un message
+### `POST /receive` - Receive a Message
 
 ```python
 @self.app.route("/receive", methods=["POST"])
 def receive_message():
 ```
 
-**Ce que fait cette route :** Reçoit et traite un message chiffré d'un autre client.
+**What this route does:** Receives and processes an encrypted message from another client.
 
-**Données attendues :**
+**Expected data:**
 ```json
 {
     "message": "...",
@@ -723,78 +723,78 @@ def receive_message():
 }
 ```
 
-**Étapes :**
-1. Vérifie qu'une session existe avec l'expéditeur
-2. Affiche le contenu chiffré dans le terminal
-3. Déchiffre le message avec AES
-4. Affiche le contenu clair dans le terminal
-5. Vérifie la signature
-6. Ajoute le message à l'historique
+**Steps:**
+1. Verifies that a session exists with the sender
+2. Displays the encrypted content in the terminal
+3. Decrypts the message with AES
+4. Displays the plain content in the terminal
+5. Verifies the signature
+6. Adds the message to history
 
-**Affichage terminal :**
+**Terminal display:**
 ```
 ============================================================
-[RECEPTION] Message de alice
-[CHIFFRE] dGhpcyBpcyBhbiBlbmNyeXB0ZWQgbWVzc2FnZS4uLg==...
+[RECEIVE] Message from alice
+[ENCRYPTED] dGhpcyBpcyBhbiBlbmNyeXB0ZWQgbWVzc2FnZS4uLg==...
 [IV] YWJjZGVmZ2hpamtsbW5vcA==
-[CLAIR] Bonjour Bob!
+[PLAIN] Hello Bob!
 [SIGNATURE] [OK]
 ============================================================
 ```
 
 ---
 
-### `POST /session_invite` - Recevoir une invitation
+### `POST /session_invite` - Receive an Invitation
 
 ```python
 @self.app.route("/session_invite", methods=["POST"])
 def session_invite():
 ```
 
-**Ce que fait cette route :** Reçoit une invitation de session d'un autre client.
+**What this route does:** Receives a session invitation from another client.
 
-**Étapes :**
-1. Déchiffre la clé AES avec la clé privée
-2. Sauvegarde la clé AES dans `keys/`
-3. Stocke la session
-4. Récupère la clé publique du pair
+**Steps:**
+1. Decrypts the AES key with the private key
+2. Saves the AES key to `keys/`
+3. Stores the session
+4. Retrieves the peer's public key
 
 ---
 
-### `POST /connect` - Établir une connexion
+### `POST /connect` - Establish a Connection
 
 ```python
 @self.app.route("/connect", methods=["POST"])
 def connect_route():
 ```
 
-**Ce que fait cette route :** Établit une connexion avec un pair (appelée depuis l'interface web).
+**What this route does:** Establishes a connection with a peer (called from the web interface).
 
 ---
 
-### `GET /clients` - Lister les clients
+### `GET /clients` - List Clients
 
 ```python
 @self.app.route("/clients")
 def clients_route():
 ```
 
-**Ce que fait cette route :** Proxy vers le serveur pour lister les clients disponibles.
+**What this route does:** Proxy to the server to list available clients.
 
 ---
 
-### `GET /messages/<peer_id>` - Récupérer les messages
+### `GET /messages/<peer_id>` - Retrieve Messages
 
 ```python
 @self.app.route("/messages/<peer_id>")
 def get_peer_messages(peer_id):
 ```
 
-**Ce que fait cette route :** Retourne les messages d'une conversation spécifique (pour l'interface web).
+**What this route does:** Returns messages from a specific conversation (for the web interface).
 
 ---
 
-## Méthodes principales
+## Main Methods
 
 ### `register()`
 
@@ -802,12 +802,12 @@ def get_peer_messages(peer_id):
 def register(self) -> bool:
 ```
 
-**Ce que fait cette fonction :** Enregistre le client auprès du serveur de confiance.
+**What this function does:** Registers the client with the trusted server.
 
-**Étapes :**
-1. Sauvegarde sa clé publique dans `keys/<client_id>_public.pem`
-2. Envoie une requête POST au serveur avec l'ID, la clé publique et le port
-3. Retourne `True` si l'enregistrement a réussi
+**Steps:**
+1. Saves its public key to `keys/<client_id>_public.pem`
+2. Sends a POST request to the server with the ID, public key, and port
+3. Returns `True` if registration succeeded
 
 ---
 
@@ -817,14 +817,14 @@ def register(self) -> bool:
 def request_session(self, target_client: str) -> bool:
 ```
 
-**Ce que fait cette fonction :** Établit une session sécurisée avec un autre client.
+**What this function does:** Establishes a secure session with another client.
 
-**Étapes :**
-1. Vérifie si une session existe déjà
-2. Demande une nouvelle session au serveur
-3. Déchiffre la clé AES reçue
-4. Sauvegarde la clé AES dans `keys/`
-5. Envoie l'invitation au pair
+**Steps:**
+1. Checks if a session already exists
+2. Requests a new session from the server
+3. Decrypts the received AES key
+4. Saves the AES key to `keys/`
+5. Sends the invitation to the peer
 
 ---
 
@@ -834,21 +834,21 @@ def request_session(self, target_client: str) -> bool:
 def send_message(self, message: str, peer_id: str = None) -> bool:
 ```
 
-**Ce que fait cette fonction :** Envoie un message chiffré et signé à un pair.
+**What this function does:** Sends an encrypted and signed message to a peer.
 
-**Étapes :**
-1. Signe le message avec la clé privée RSA
-2. Chiffre le message avec la clé AES
-3. Affiche le contenu clair et chiffré dans le terminal
-4. Envoie au pair
-5. Ajoute à l'historique
+**Steps:**
+1. Signs the message with the RSA private key
+2. Encrypts the message with the AES key
+3. Displays the plain and encrypted content in the terminal
+4. Sends to the peer
+5. Adds to history
 
-**Affichage terminal :**
+**Terminal display:**
 ```
 ============================================================
-[ENVOI] Message vers bob
-[CLAIR] Bonjour Bob!
-[CHIFFRE] dGhpcyBpcyBhbiBlbmNyeXB0ZWQgbWVzc2FnZS4uLg==...
+[SEND] Message to bob
+[PLAIN] Hello Bob!
+[ENCRYPTED] dGhpcyBpcyBhbiBlbmNyeXB0ZWQgbWVzc2FnZS4uLg==...
 [IV] YWJjZGVmZ2hpamtsbW5vcA==
 [SIGNATURE] c2lnbmF0dXJlIGhlcmUuLi4=...
 ============================================================
@@ -862,26 +862,26 @@ def send_message(self, message: str, peer_id: str = None) -> bool:
 def run(self):
 ```
 
-**Ce que fait cette fonction :** Démarre le client complet.
+**What this function does:** Starts the complete client.
 
-**Étapes :**
-1. S'enregistre auprès du serveur
-2. Désactive les logs Flask (pour éviter le spam)
-3. Démarre le serveur Flask dans un thread séparé
-4. Affiche les commandes disponibles
-5. Entre dans une boucle qui lit les commandes utilisateur
+**Steps:**
+1. Registers with the server
+2. Disables Flask logs (to avoid spam)
+3. Starts the Flask server in a separate thread
+4. Displays available commands
+5. Enters a loop that reads user commands
 
-**Commandes disponibles :**
-- `/list` : Liste les clients disponibles
-- `/connect <id>` : Se connecter à un client
-- `/sessions` : Liste les sessions actives
-- `/switch <id>` : Changer de session courante
-- `/history [id]` : Afficher l'historique
-- `/quit` : Quitter
+**Available commands:**
+- `/list`: List available clients
+- `/connect <id>`: Connect to a client
+- `/sessions`: List active sessions
+- `/switch <id>`: Switch current session
+- `/history [id]`: Display history
+- `/quit`: Quit
 
 ---
 
-# client.py - Point d'entrée
+# client.py - Entry Point
 
 ```python
 #!/usr/bin/env python3
@@ -903,70 +903,70 @@ if __name__ == "__main__":
     main()
 ```
 
-**Ce que fait ce fichier :** Point d'entrée simple du programme.
+**What this file does:** Simple program entry point.
 
-**Exemple d'utilisation :**
+**Usage example:**
 ```bash
 python client.py alice 5001
 ```
 
 ---
 
-# Pages HTML
+# HTML Pages
 
-## index.html - Page de sélection des clients
+## index.html - Client Selection Page
 
-**Fonctionnalités :**
-- Affiche l'identifiant du client connecté
-- Liste tous les clients disponibles
-- Indique le statut (Disponible / Connecté)
-- Clic sur un client → établit la connexion et redirige vers le chat
-- Actualisation automatique toutes les 5 secondes
+**Features:**
+- Displays the connected client's identifier
+- Lists all available clients
+- Indicates status (Available / Connected)
+- Click on a client → establishes connection and redirects to chat
+- Automatic refresh every 5 seconds
 
-**Structure :**
+**Structure:**
 ```
 +----------------------------------+
-|    Communication Sécurisée       |
+|    Secure Communication          |
 |           alice                  |
 +----------------------------------+
-|    CLIENTS DISPONIBLES           |
+|    AVAILABLE CLIENTS             |
 +----------------------------------+
-| bob                  [Disponible]|
-| charlie              [Connecté]  |
+| bob                  [Available] |
+| charlie              [Connected] |
 +----------------------------------+
-|      [Actualiser la liste]       |
+|      [Refresh list]              |
 +----------------------------------+
 ```
 
 ---
 
-## chat.html - Page de discussion
+## chat.html - Chat Page
 
-**Fonctionnalités :**
-- Header avec nom du pair et bouton retour
-- Zone de chat avec historique des messages
-- Messages envoyés (bleu, à droite)
-- Messages reçus (blanc, à gauche)
-- Indicateur de signature `[OK]` / `[NOTOK]`
-- Zone de saisie + bouton Envoyer
-- Actualisation automatique toutes les 2 secondes
+**Features:**
+- Header with peer name and back button
+- Chat area with message history
+- Sent messages (blue, right-aligned)
+- Received messages (white, left-aligned)
+- Signature indicator `[OK]` / `[NOTOK]`
+- Input area + Send button
+- Automatic refresh every 2 seconds
 
-**Structure :**
+**Structure:**
 ```
 +----------------------------------+
 | <- |  bob                        |
-|    |  Communication chiffrée     |
+|    |  Encrypted communication    |
 +----------------------------------+
 |                                  |
-|        [SYSTEM] Session établie  |
+|        [SYSTEM] Session established|
 |                                  |
-|                    Bonjour! [OK] |
+|                    Hello! [OK]   |
 |                         14:30:00 |
 |                                  |
-| Hello!                           |
+| Hi!                              |
 | [OK] 14:30:05                    |
 |                                  |
 +----------------------------------+
-| [Tapez votre message...]  [Envoyer]
+| [Type your message...]  [Send]   |
 +----------------------------------+
 ```
