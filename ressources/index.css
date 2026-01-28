@@ -1,0 +1,149 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    background-color: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 450px;
+    padding: 30px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    color: #1a1a2e;
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.header .client-id {
+    color: #007bff;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.section-title {
+    color: #666;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f2f5;
+}
+
+.client-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.client-card {
+    background-color: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.client-card:hover {
+    background-color: #e7f1ff;
+    border-color: #007bff;
+    transform: translateY(-2px);
+}
+
+.client-card.has-session {
+    border-color: #28a745;
+    background-color: #e8f5e9;
+}
+
+.client-card.has-session:hover {
+    background-color: #c8e6c9;
+}
+
+.client-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.client-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.client-address {
+    font-size: 13px;
+    color: #888;
+}
+
+.client-status {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.status-available {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-connected {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.no-clients {
+    text-align: center;
+    color: #888;
+    padding: 40px 20px;
+    font-style: italic;
+}
+
+.refresh-btn {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 12px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.refresh-btn:hover {
+    background-color: #5a6268;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
